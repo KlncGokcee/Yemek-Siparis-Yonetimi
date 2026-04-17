@@ -1,0 +1,3 @@
+/Users/kurama/Desktop/Store/YeSiYoPrototip/cmake-build-debug/CMakeFiles/YeSiYoPrototip.dir
+/Users/kurama/Desktop/Store/YeSiYoPrototip/cmake-build-debug/CMakeFiles/edit_cache.dir
+/Users/kurama/Desktop/Store/YeSiYoPrototip/cmake-build-debug/CMakeFiles/rebuild_cache.dir
