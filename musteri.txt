@@ -1,0 +1,382 @@
+/*
+ * ReYeTaP - Restoran Yemek Takip Projesi
+ * Müşteri Uygulaması (musteri.exe)
+ *
+ * Bu program müşterilerin yemek siparişi verebileceği,
+ * sipariş durumunu takip edebileceği ve geçmiş siparişlerini
+ * görebileceği bir sistem sağlar.
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+
+#define MAX_YEMEK 50
+#define MAX_SIPARIS 100
+#define MAX_STRING 100
+
+// Yemek yapısı
+typedef struct {
+    int id;
+    char ad[MAX_STRING];
+    float fiyat;
+    char kategori[MAX_STRING];
+} Yemek;
+
+// Sipariş yapısı
+typedef struct {
+    int siparis_id;
+    char musteri_adi[MAX_STRING];
+    char yemek_adi[MAX_STRING];
+    int miktar;
+    float toplam_fiyat;
+    char durum[MAX_STRING]; // "Hazırlanıyor", "Hazır", "Teslim Edildi"
+    time_t siparis_zamani;
+} Sipariş;
+
+// Global değişkenler
+Yemek yemekler[MAX_YEMEK];
+int yemek_sayisi = 0;
+Sipariş siparisler[MAX_SIPARIS];
+int siparis_sayisi = 0;
+
+// Fonksiyon prototipleri
+void yemek_listesi_yukle();
+void siparisler_yukle();
+void siparisler_kaydet();
+void ana_menu();
+void yeni_siparis_menu();
+void mevcut_siparis_durumu();
+void gecmis_siparisler();
+void yemek_listesi_goster();
+void siparis_ver();
+void siparis_durumu_goster();
+void gecmis_siparisleri_goster();
+
+int main() {
+    printf("=== ReYeTaP - Restoran Yemek Takip Projesi ===\n");
+    printf("Müşteri Uygulaması\n\n");
+
+    // Verileri yükle
+    yemek_listesi_yukle();
+    siparisler_yukle();
+
+    ana_menu();
+
+    return 0;
+}
+
+// Yemek listesini dosyadan yükle
+void yemek_listesi_yukle() {
+    FILE *dosya = fopen("yemeklistesi.txt", "r");
+    if (dosya == NULL) {
+        printf("yemeklistesi.txt dosyası bulunamadı. Örnek dosya oluşturuluyor...\n");
+
+        // Örnek yemek listesi oluştur
+        FILE *yeni_dosya = fopen("yemeklistesi.txt", "w");
+        if (yeni_dosya != NULL) {
+            fprintf(yeni_dosya, "1|Çorba|15.50|Başlangıç\n");
+            fprintf(yeni_dosya, "2|Kebap|45.00|Ana Yemek\n");
+            fprintf(yeni_dosya, "3|Pilav|12.00|Yan Ürün\n");
+            fprintf(yeni_dosya, "4|Salata|18.00|Salata\n");
+            fprintf(yeni_dosya, "5|Baklava|25.00|Tatlı\n");
+            fprintf(yeni_dosya, "6|Ayran|8.00|İçecek\n");
+            fprintf(yeni_dosya, "7|Künefe|30.00|Tatlı\n");
+            fprintf(yeni_dosya, "8|Pide|35.00|Ana Yemek\n");
+            fclose(yeni_dosya);
+        }
+
+        dosya = fopen("yemeklistesi.txt", "r");
+    }
+
+    if (dosya != NULL) {
+        yemek_sayisi = 0;
+        while (fscanf(dosya, "%d|%[^|]|%f|%[^\n]\n",
+               &yemekler[yemek_sayisi].id,
+               yemekler[yemek_sayisi].ad,
+               &yemekler[yemek_sayisi].fiyat,
+               yemekler[yemek_sayisi].kategori) == 4) {
+            yemek_sayisi++;
+            if (yemek_sayisi >= MAX_YEMEK) break;
+        }
+        fclose(dosya);
+    }
+}
+
+// Siparişleri dosyadan yükle
+void siparisler_yukle() {
+    FILE *dosya = fopen("siparisler.txt", "r");
+    if (dosya == NULL) {
+        printf("siparisler.txt dosyası bulunamadı. Yeni dosya oluşturulacak.\n");
+        return;
+    }
+
+    siparis_sayisi = 0;
+    while (fscanf(dosya, "%d|%[^|]|%[^|]|%d|%f|%[^|]|%ld\n",
+           &siparisler[siparis_sayisi].siparis_id,
+           siparisler[siparis_sayisi].musteri_adi,
+           siparisler[siparis_sayisi].yemek_adi,
+           &siparisler[siparis_sayisi].miktar,
+           &siparisler[siparis_sayisi].toplam_fiyat,
+           siparisler[siparis_sayisi].durum,
+           &siparisler[siparis_sayisi].siparis_zamani) == 7) {
+        siparis_sayisi++;
+        if (siparis_sayisi >= MAX_SIPARIS) break;
+    }
+    fclose(dosya);
+}
+
+// Siparişleri dosyaya kaydet
+void siparisler_kaydet() {
+    FILE *dosya = fopen("siparisler.txt", "w");
+    if (dosya == NULL) {
+        printf("siparisler.txt dosyası oluşturulamadı!\n");
+        return;
+    }
+
+    for (int i = 0; i < siparis_sayisi; i++) {
+        fprintf(dosya, "%d|%s|%s|%d|%.2f|%s|%ld\n",
+                siparisler[i].siparis_id,
+                siparisler[i].musteri_adi,
+                siparisler[i].yemek_adi,
+                siparisler[i].miktar,
+                siparisler[i].toplam_fiyat,
+                siparisler[i].durum,
+                siparisler[i].siparis_zamani);
+    }
+    fclose(dosya);
+}
+
+// Ana menü
+void ana_menu() {
+    int secim;
+
+    do {
+        printf("\n=== ANA MENÜ ===\n");
+        printf("1. Yeni Sipariş\n");
+        printf("2. Mevcut Sipariş Durumu\n");
+        printf("3. Geçmiş Siparişler\n");
+        printf("4. Çıkış\n");
+        printf("Seçiminizi yapın (1-4): ");
+        scanf("%d", &secim);
+
+        switch (secim) {
+            case 1:
+                yeni_siparis_menu();
+                break;
+            case 2:
+                mevcut_siparis_durumu();
+                break;
+            case 3:
+                gecmis_siparisler();
+                break;
+            case 4:
+                printf("ReYeTaP uygulamasından çıkılıyor...\n");
+                break;
+            default:
+                printf("Geçersiz seçim! Lütfen 1-4 arasında bir sayı girin.\n");
+        }
+    } while (secim != 4);
+}
+
+// Yeni sipariş menüsü
+void yeni_siparis_menu() {
+    int secim;
+
+    do {
+        printf("\n=== YENİ SİPARİŞ MENÜSÜ ===\n");
+        printf("1. Yemek Listesini Görüntüle\n");
+        printf("2. Sipariş Ver\n");
+        printf("3. Ana Menüye Dön\n");
+        printf("Seçiminizi yapın (1-3): ");
+        scanf("%d", &secim);
+
+        switch (secim) {
+            case 1:
+                yemek_listesi_goster();
+                break;
+            case 2:
+                siparis_ver();
+                break;
+            case 3:
+                return;
+            default:
+                printf("Geçersiz seçim! Lütfen 1-3 arasında bir sayı girin.\n");
+        }
+    } while (secim != 3);
+}
+
+// Yemek listesini göster
+void yemek_listesi_goster() {
+    printf("\n=== YEMEK LİSTESİ ===\n");
+    printf("%-5s %-20s %-10s %-15s\n", "ID", "Yemek Adı", "Fiyat (TL)", "Kategori");
+    printf("------------------------------------------------\n");
+
+    for (int i = 0; i < yemek_sayisi; i++) {
+        printf("%-5d %-20s %-10.2f %-15s\n",
+               yemekler[i].id,
+               yemekler[i].ad,
+               yemekler[i].fiyat,
+               yemekler[i].kategori);
+    }
+    printf("\n");
+}
+
+// Sipariş ver
+void siparis_ver() {
+    char musteri_adi[MAX_STRING];
+    int yemek_id, miktar;
+    int yemek_bulundu = 0;
+    Yemek secilen_yemek;
+
+    printf("\n=== YENİ SİPARİŞ ===\n");
+
+    // Müşteri adını al
+    printf("Adınızı girin: ");
+    scanf(" %[^\n]", musteri_adi);
+
+    // Yemek listesini göster
+    yemek_listesi_goster();
+
+    // Yemek seçimi
+    printf("Sipariş vermek istediğiniz yemeğin ID'sini girin: ");
+    scanf("%d", &yemek_id);
+
+    // Yemeği bul
+    for (int i = 0; i < yemek_sayisi; i++) {
+        if (yemekler[i].id == yemek_id) {
+            secilen_yemek = yemekler[i];
+            yemek_bulundu = 1;
+            break;
+        }
+    }
+
+    if (!yemek_bulundu) {
+        printf("Geçersiz yemek ID'si!\n");
+        return;
+    }
+
+    // Miktar al
+    printf("Miktar girin: ");
+    scanf("%d", &miktar);
+
+    if (miktar <= 0) {
+        printf("Geçersiz miktar!\n");
+        return;
+    }
+
+    // Sipariş oluştur
+    Sipariş yeni_siparis;
+    yeni_siparis.siparis_id = siparis_sayisi + 1;
+    strcpy(yeni_siparis.musteri_adi, musteri_adi);
+    strcpy(yeni_siparis.yemek_adi, secilen_yemek.ad);
+    yeni_siparis.miktar = miktar;
+    yeni_siparis.toplam_fiyat = secilen_yemek.fiyat * miktar;
+    strcpy(yeni_siparis.durum, "Hazırlanıyor");
+    yeni_siparis.siparis_zamani = time(NULL);
+
+    // Siparişi listeye ekle
+    siparisler[siparis_sayisi] = yeni_siparis;
+    siparis_sayisi++;
+
+    // Dosyaya kaydet
+    siparisler_kaydet();
+
+    printf("\n=== SİPARİŞ BAŞARILI ===\n");
+    printf("Sipariş ID: %d\n", yeni_siparis.siparis_id);
+    printf("Yemek: %s\n", yeni_siparis.yemek_adi);
+    printf("Miktar: %d\n", yeni_siparis.miktar);
+    printf("Toplam Fiyat: %.2f TL\n", yeni_siparis.toplam_fiyat);
+    printf("Durum: %s\n", yeni_siparis.durum);
+    printf("Sipariş zamanı: %s", ctime(&yeni_siparis.siparis_zamani));
+}
+
+// Mevcut sipariş durumu
+void mevcut_siparis_durumu() {
+    char musteri_adi[MAX_STRING];
+    int siparis_bulundu = 0;
+
+    printf("\n=== MEVCUT SİPARİŞ DURUMU ===\n");
+    printf("Adınızı girin: ");
+    scanf(" %[^\n]", musteri_adi);
+
+    printf("\n%-10s %-20s %-8s %-12s %-15s %-20s\n",
+           "Sipariş ID", "Yemek", "Miktar", "Toplam Fiyat", "Durum", "Sipariş Zamanı");
+    printf("--------------------------------------------------------------------------------\n");
+
+    for (int i = 0; i < siparis_sayisi; i++) {
+        if (strcmp(siparisler[i].musteri_adi, musteri_adi) == 0) {
+            printf("%-10d %-20s %-8d %-12.2f %-15s %-20s",
+                   siparisler[i].siparis_id,
+                   siparisler[i].yemek_adi,
+                   siparisler[i].miktar,
+                   siparisler[i].toplam_fiyat,
+                   siparisler[i].durum,
+                   ctime(&siparisler[i].siparis_zamani));
+            siparis_bulundu = 1;
+        }
+    }
+
+    if (!siparis_bulundu) {
+        printf("Bu isimle kayıtlı sipariş bulunamadı.\n");
+    }
+    printf("\n");
+}
+
+// Geçmiş siparişler
+void gecmis_siparisler() {
+    char musteri_adi[MAX_STRING];
+    int siparis_bulundu = 0;
+
+    printf("\n=== GEÇMİŞ SİPARİŞLER ===\n");
+    printf("Adınızı girin: ");
+    scanf(" %[^\n]", musteri_adi);
+
+    printf("\n%-10s %-20s %-8s %-12s %-15s %-20s\n",
+           "Sipariş ID", "Yemek", "Miktar", "Toplam Fiyat", "Durum", "Sipariş Zamanı");
+    printf("--------------------------------------------------------------------------------\n");
+
+    for (int i = 0; i < siparis_sayisi; i++) {
+        if (strcmp(siparisler[i].musteri_adi, musteri_adi) == 0) {
+            printf("%-10d %-20s %-8d %-12.2f %-15s %-20s",
+                   siparisler[i].siparis_id,
+                   siparisler[i].yemek_adi,
+                   siparisler[i].miktar,
+                   siparisler[i].toplam_fiyat,
+                   siparisler[i].durum,
+                   ctime(&siparisler[i].siparis_zamani));
+            siparis_bulundu = 1;
+        }
+    }
+
+    if (!siparis_bulundu) {
+        printf("Bu isimle kayıtlı sipariş bulunamadı.\n");
+    }
+    printf("\n");
+}
+
+/*
+ * PROGRAM ÖZELLİKLERİ:
+ *
+ * 1. YENİ SİPARİŞ:
+ *    - Yemek listesini görüntüleme
+ *    - Sipariş verme (müşteri adı, yemek ID, miktar)
+ *    - Otomatik fiyat hesaplama
+ *    - Sipariş zamanı kaydetme
+ *
+ * 2. MEVCUT SİPARİŞ DURUMU:
+ *    - Müşteri adına göre aktif siparişleri listeleme
+ *    - Sipariş durumu takibi (Hazırlanıyor/Hazır/Teslim Edildi)
+ *
+ * 3. GEÇMİŞ SİPARİŞLER:
+ *    - Müşteri adına göre tüm geçmiş siparişleri görüntüleme
+ *    - Sipariş detayları (ID, yemek, miktar, fiyat, durum, zaman)
+ *
+ * DOSYA YAPISI:
+ * - yemeklistesi.txt: Yemek bilgileri (ID|Ad|Fiyat|Kategori)
+ * - siparisler.txt: Sipariş kayıtları (ID|Müşteri|Yemek|Miktar|Fiyat|Durum|Zaman)
+ *
+ * DERLEME: gcc -o musteri adım1.c
+ * ÇALIŞTIRMA: ./musteri
+ */
