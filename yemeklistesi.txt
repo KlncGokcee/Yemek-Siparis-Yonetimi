@@ -1,0 +1,8 @@
+1|Çorba|15.50|Başlangıç
+2|Kebap|45.00|Ana Yemek
+3|Pilav|12.00|Yan Ürün
+4|Salata|18.00|Salata
+5|Baklava|25.00|Tatlı
+6|Ayran|8.00|İçecek
+7|Künefe|30.00|Tatlı
+8|Pide|35.00|Ana Yemek

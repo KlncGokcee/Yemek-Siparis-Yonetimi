@@ -1,0 +1,4 @@
+1|Ahmet Yılmaz|Kebap|2|90.00|Hazırlanıyor|1703123456
+2|Fatma Demir|Çorba|1|15.50|Hazır|1703123500
+3|Mehmet Kaya|Pide|3|105.00|Teslim Edildi|1703123400
+4|Ayşe Özkan|Baklava|1|25.00|Hazırlanıyor|1703123550
